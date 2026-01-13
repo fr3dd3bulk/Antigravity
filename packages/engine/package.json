@@ -1,0 +1,11 @@
+{
+  "name": "@n8n-clone/engine",
+  "version": "1.0.0",
+  "description": "Workflow execution engine",
+  "main": "src/index.js",
+  "type": "module",
+  "dependencies": {
+    "@n8n-clone/shared": "1.0.0",
+    "@n8n-clone/node-sdk": "1.0.0"
+  }
+}

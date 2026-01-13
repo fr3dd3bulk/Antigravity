@@ -1,0 +1,26 @@
+{
+  "name": "n8n-clone",
+  "version": "1.0.0",
+  "description": "Production-grade workflow automation platform built with MERN stack",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "docker compose up",
+    "build": "npm run build --workspaces",
+    "start": "docker compose up -d",
+    "stop": "docker compose down",
+    "clean": "docker compose down -v && rm -rf node_modules packages/*/node_modules services/*/node_modules",
+    "logs": "docker compose logs -f"
+  },
+  "keywords": [
+    "workflow",
+    "automation",
+    "n8n",
+    "mern"
+  ],
+  "author": "",
+  "license": "MIT"
+}
