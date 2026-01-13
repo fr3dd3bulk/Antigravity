@@ -15,12 +15,22 @@ A complete, production-ready workflow automation platform built with the MERN st
 - **Real-time Execution Logs** - Track workflow progress in real-time
 - **Version Control** - Automatic workflow versioning
 - **Credential Management** - AES-256 encrypted credential vault
+- **🆕 Workflow Action Management** - Super admin control over workflow actions
+
+### Super Admin Features
+- **Global Action Control** - Enable/disable workflow actions across all organizations
+- **Automatic Workflow Deactivation** - Workflows using disabled actions are automatically deactivated
+- **Usage Analytics** - Track execution counts and last usage for each action
+- **Core Action Protection** - Prevent critical actions from being disabled
+- **Action Sync** - Automatically sync actions from node definitions
+- **Audit Logging** - Complete history of action enable/disable operations
 
 ### Architecture
 - **Microservices Design** - Separate services for API, Workers, and Scheduler
 - **Horizontal Scalability** - Stateless workers with BullMQ job queues
 - **Production-Ready** - Docker Compose orchestration with health checks
 - **Security First** - JWT auth, rate limiting, encryption, RBAC
+- **Modern Stack** - Node.js 22 LTS, React 18, latest stable packages
 
 ## 📋 Table of Contents
 
@@ -29,17 +39,19 @@ A complete, production-ready workflow automation platform built with the MERN st
 3. [Services](#services)
 4. [Node System](#node-system)
 5. [Workflow Engine](#workflow-engine)
-6. [API Endpoints](#api-endpoints)
-7. [Environment Variables](#environment-variables)
-8. [Development](#development)
-9. [Extending the Platform](#extending-the-platform)
-10. [Production Deployment](#production-deployment)
+6. [Super Admin Workflow Actions](#super-admin-workflow-actions)
+7. [API Endpoints](#api-endpoints)
+8. [Environment Variables](#environment-variables)
+9. [Development](#development)
+10. [Extending the Platform](#extending-the-platform)
+11. [Production Deployment](#production-deployment)
 
 ## 🎯 Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
-- Node.js 20+ (for local development)
+- Node.js 22+ (for local development) - See `.nvmrc` for exact version
+- npm 10+
 
 ### Running with Docker
 
@@ -96,29 +108,55 @@ docker compose up
 
 ### Components
 
-**Frontend (React + Redux + React Flow)**
-- Visual workflow editor
+**Frontend (React 18 + Redux Toolkit + React Flow)**
+- Visual workflow editor with drag-and-drop
 - Real-time execution monitoring
 - Organization and user management
-- Admin panel
+- Super admin panel with workflow action management
+- Modern UI with Tailwind CSS
+- Built with Vite for fast development
 
-**API Service (Express)**
+**API Service (Express + Node.js 22)**
 - RESTful API endpoints
-- Authentication & authorization
+- JWT authentication & RBAC authorization
 - Webhook handling
 - Workflow management
 - Subscription management
+- Workflow action management (Super Admin)
+- Rate limiting and security headers
 
 **Worker Service (BullMQ)**
 - Stateless workflow execution
-- Parallel job processing
+- Parallel job processing with configurable concurrency
 - Retry and timeout handling
 - Credential decryption
+- Action validation before execution
+- Horizontally scalable
 
 **Scheduler Service (node-cron)**
 - Cron-based triggers
 - Time-based workflow execution
-- Automatic workflow scheduling
+- Automatic workflow discovery and scheduling
+- Periodic refresh of active workflows
+
+**Execution Engine**
+- DAG validation with cycle detection
+- Topological sorting for optimal execution order
+- Parallel execution support
+- Action enable/disable checking
+- Usage statistics tracking
+
+**Node SDK**
+- Extensible node system
+- 20+ built-in nodes across 5 categories
+- Easy to create custom nodes
+- Version support
+
+**Shared Library**
+- Database models (14 models including WorkflowAction)
+- Utilities (encryption, auth, validation)
+- Error handling
+- Logging
 
 **Database (MongoDB)**
 - All persistent data
@@ -259,6 +297,7 @@ export class MyCustomNode extends ActionNode {
 - **Error Handling** - Graceful error recovery
 - **State Persistence** - Saves execution progress
 - **Resume Support** - Can restart from failure point
+- **Action Validation** - Checks if workflow actions are enabled before execution
 
 ### Execution Context
 Each node receives:
@@ -267,6 +306,95 @@ Each node receives:
 - Credentials (decrypted)
 - Execution ID
 - User context
+
+## 🔧 Super Admin Workflow Actions
+
+Super admins can control which workflow actions are available across the entire platform. This feature provides centralized management and security control.
+
+### Features
+
+**Enable/Disable Actions**
+- Toggle any workflow action on or off globally
+- Provide reasons for disabling actions
+- Core actions (Manual, Webhook) are protected from being disabled
+
+**Automatic Workflow Management**
+- When an action is disabled, all workflows using that action are automatically deactivated
+- Workflows are marked with the reason for deactivation
+- Re-enabling an action does NOT automatically reactivate workflows (manual review required)
+
+**Usage Analytics**
+- Track total execution count for each action
+- View last usage date
+- Filter actions by category and status
+- See which workflows are affected before disabling an action
+
+**Action Synchronization**
+- Automatically sync available actions from node definitions
+- New nodes are automatically added to the action management system
+- Keep action metadata up to date
+
+### Using Workflow Action Management
+
+1. **Access Admin Panel**
+   - Navigate to the Admin panel
+   - Click on the "Workflow Actions" tab
+   - Requires super admin role
+
+2. **View Actions**
+   - Filter by category (trigger, action, condition, utility, ai)
+   - Filter by status (enabled/disabled)
+   - View usage statistics for each action
+
+3. **Disable an Action**
+   - Click "Disable" button next to the action
+   - Provide a reason for disabling
+   - System will automatically deactivate affected workflows
+   - View count of affected workflows
+
+4. **Enable an Action**
+   - Click "Enable" button next to the action
+   - Action becomes available immediately
+   - Previously affected workflows remain deactivated (must be manually reviewed and reactivated)
+
+5. **Sync Actions**
+   - Click "Sync Actions" button
+   - System updates action list from node definitions
+   - New actions are added, existing ones are updated
+
+### API Endpoints
+
+```
+GET  /api/admin/workflow-actions - List all workflow actions
+GET  /api/admin/workflow-actions/stats - Get action statistics
+GET  /api/admin/workflow-actions/:actionId - Get specific action
+PUT  /api/admin/workflow-actions/:actionId - Update action
+POST /api/admin/workflow-actions/:actionId/disable - Disable action
+POST /api/admin/workflow-actions/:actionId/enable - Enable action
+POST /api/admin/workflow-actions/sync - Sync from node definitions
+```
+
+### Use Cases
+
+**Security Compliance**
+- Temporarily disable potentially risky actions (e.g., database queries, system commands)
+- Maintain compliance during security audits
+- Quick response to discovered vulnerabilities
+
+**Resource Management**
+- Disable resource-intensive actions during peak hours
+- Control access to expensive third-party APIs
+- Manage system load
+
+**Gradual Rollout**
+- Disable new actions initially
+- Enable for testing in controlled environments
+- Gradually roll out to all users
+
+**Emergency Response**
+- Quickly disable compromised or buggy actions
+- Prevent cascading failures
+- Maintain system stability
 
 ## 📡 API Endpoints
 
@@ -349,38 +477,53 @@ FRONTEND_URL=http://localhost:3001
 
 ## 💻 Development
 
+### Prerequisites
+
+- Node.js 22.12.0 or higher (see `.nvmrc`)
+- npm 10.0.0 or higher
+- Docker and Docker Compose (for containerized deployment)
+
 ### Local Setup (Without Docker)
 
-1. Install dependencies:
+1. Install Node.js using nvm:
+```bash
+# Install nvm if not already installed
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Use the correct Node version
+nvm use
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Start MongoDB and Redis:
+3. Start MongoDB and Redis:
 ```bash
 # Using Docker for databases only
 docker compose up mongo redis
 ```
 
-3. Start services:
+4. Start services:
 ```bash
 # Terminal 1 - API
-cd services/api
+cd backend/api
 npm install
 npm start
 
 # Terminal 2 - Worker
-cd services/worker
+cd backend/worker
 npm install
 npm start
 
 # Terminal 3 - Scheduler
-cd services/scheduler
+cd backend/scheduler
 npm install
 npm start
 
 # Terminal 4 - Frontend
-cd services/frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -388,26 +531,56 @@ npm run dev
 ### Project Structure
 ```
 .
-├── packages/
-│   ├── shared/          # Shared models and utilities
+├── frontend/            # React application
+│   ├── src/
+│   │   ├── components/  # React components
+│   │   ├── pages/       # Page components
+│   │   ├── store/       # Redux store
+│   │   └── styles/      # CSS styles
+│   ├── Dockerfile
+│   └── package.json
+│
+├── backend/             # Backend services
+│   ├── api/             # API service (Express)
+│   │   ├── src/
+│   │   │   ├── controllers/
+│   │   │   ├── middleware/
+│   │   │   └── routes/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── worker/          # Worker service (BullMQ)
+│   ├── scheduler/       # Scheduler service (node-cron)
+│   ├── engine/          # Workflow execution engine
 │   ├── node-sdk/        # Node SDK for custom nodes
-│   └── engine/          # Workflow execution engine
-├── services/
-│   ├── api/             # API service
-│   ├── worker/          # Worker service
-│   ├── scheduler/       # Scheduler service
-│   └── frontend/        # React frontend
+│   └── shared/          # Shared models and utilities
+│
 ├── docker-compose.yml   # Docker orchestration
-└── .env.example         # Environment template
+├── .nvmrc              # Node.js version
+├── eslint.config.js    # ESLint configuration
+├── .prettierrc         # Prettier configuration
+└── .env.example        # Environment template
+```
+
+### Code Quality
+
+The project includes modern code quality tools:
+
+```bash
+# Lint code
+npm run lint
+
+# Format code
+npm run format
 ```
 
 ## 🔌 Extending the Platform
 
 ### Adding New Nodes
 
-1. Create node class in `packages/node-sdk/src/nodes/`
+1. Create node class in `backend/node-sdk/src/nodes/`
 2. Export from appropriate category index
-3. Add to main index in `packages/node-sdk/src/index.js`
+3. Add to main index in `backend/node-sdk/src/index.js`
 4. Register in execution engine
 5. Add node definition to database initialization
 
