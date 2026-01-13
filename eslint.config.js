@@ -50,11 +50,7 @@ export default [
       // Code style
       'semi': ['error', 'always'],
       'quotes': ['error', 'single', { avoidEscape: true }],
-      'comma-dangle': ['error', 'never'],
-      
-      // React best practices (when react plugin is available)
-      'react/prop-types': 'off',
-      'react/react-in-jsx-scope': 'off'
+      'comma-dangle': ['error', 'never']
     }
   }
 ];

@@ -271,16 +271,16 @@ export const syncWorkflowActions = async (req, res, next) => {
     let updated = 0;
     
     for (const nodeDef of nodeDefinitions) {
-      const existingAction = await WorkflowAction.findOne({ actionId: nodeDef.type });
+      const existingAction = await WorkflowAction.findOne({ actionId: nodeDef.nodeType });
       
       if (!existingAction) {
         await WorkflowAction.create({
-          actionId: nodeDef.type,
+          actionId: nodeDef.nodeType,
           name: nodeDef.name,
           category: nodeDef.category,
           description: nodeDef.description || '',
           enabled: true,
-          isCore: ['manual', 'webhook'].includes(nodeDef.type),
+          isCore: ['manual-trigger', 'webhook-trigger'].includes(nodeDef.nodeType),
           modifiedBy: req.user._id
         });
         created++;

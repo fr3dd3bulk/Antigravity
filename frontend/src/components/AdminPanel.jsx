@@ -90,23 +90,37 @@ export default function AdminPanel() {
 }
 
 function WorkflowActionsTab() {
-  const { data: actions, isLoading, refetch } = api.endpoints.getWorkflowActions?.useQuery() || {};
-  const { data: actionStats } = api.endpoints.getWorkflowActionStats?.useQuery() || {};
-  const [disableAction] = api.endpoints.disableWorkflowAction?.useMutation() || [() => {}];
-  const [enableAction] = api.endpoints.enableWorkflowAction?.useMutation() || [() => {}];
-  const [syncActions] = api.endpoints.syncWorkflowActions?.useMutation() || [() => {}];
+  const getWorkflowActionsQuery = api.endpoints.getWorkflowActions?.useQuery() || {};
+  const { data: actions, isLoading, refetch } = getWorkflowActionsQuery;
+  
+  const getWorkflowActionStatsQuery = api.endpoints.getWorkflowActionStats?.useQuery() || {};
+  const { data: actionStats } = getWorkflowActionStatsQuery;
+  
+  const disableWorkflowActionMutation = api.endpoints.disableWorkflowAction?.useMutation() || [];
+  const [disableAction] = disableWorkflowActionMutation;
+  
+  const enableWorkflowActionMutation = api.endpoints.enableWorkflowAction?.useMutation() || [];
+  const [enableAction] = enableWorkflowActionMutation;
+  
+  const syncWorkflowActionsMutation = api.endpoints.syncWorkflowActions?.useMutation() || [];
+  const [syncActions] = syncWorkflowActionsMutation;
   
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
   const handleToggle = async (action) => {
+    if (!disableAction || !enableAction) {
+      alert('Workflow action management is not available');
+      return;
+    }
+    
     if (action.enabled) {
       const reason = prompt('Please provide a reason for disabling this action:');
       if (!reason) return;
       
       try {
         await disableAction({ actionId: action.actionId, reason }).unwrap();
-        refetch();
+        if (refetch) refetch();
         alert(`Action disabled. ${action.workflowCount || 0} workflows have been deactivated.`);
       } catch (error) {
         alert('Error disabling action: ' + (error.data?.message || error.message));
@@ -114,7 +128,7 @@ function WorkflowActionsTab() {
     } else {
       try {
         await enableAction({ actionId: action.actionId }).unwrap();
-        refetch();
+        if (refetch) refetch();
         alert('Action enabled successfully');
       } catch (error) {
         alert('Error enabling action: ' + (error.data?.message || error.message));
@@ -123,9 +137,14 @@ function WorkflowActionsTab() {
   };
 
   const handleSync = async () => {
+    if (!syncActions) {
+      alert('Workflow action sync is not available');
+      return;
+    }
+    
     try {
       const result = await syncActions().unwrap();
-      refetch();
+      if (refetch) refetch();
       alert(result.message || 'Workflow actions synced successfully');
     } catch (error) {
       alert('Error syncing actions: ' + (error.data?.message || error.message));

@@ -68,3 +68,27 @@ export async function requireOrgAccess(req, res, next) {
     return res.status(500).json({ error: 'Access check failed' });
   }
 }
+
+export function requireRole(roleName) {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      // Check for super admin
+      if (roleName === 'super_admin' && !req.user.isSuperAdmin) {
+        return res.status(403).json({ error: 'Super admin access required' });
+      }
+
+      // For other roles, check user's role
+      if (req.user.role !== roleName && !req.user.isSuperAdmin) {
+        return res.status(403).json({ error: `${roleName} role required` });
+      }
+
+      next();
+    } catch (error) {
+      return res.status(500).json({ error: 'Role check failed' });
+    }
+  };
+}

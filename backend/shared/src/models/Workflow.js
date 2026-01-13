@@ -57,6 +57,14 @@ const workflowSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  active: {
+    type: Boolean,
+    default: false
+  },
+  deactivatedReason: {
+    type: String,
+    default: ''
+  },
   tags: [String],
   currentVersionId: {
     type: mongoose.Schema.Types.ObjectId,

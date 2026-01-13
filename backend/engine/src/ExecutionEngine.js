@@ -6,6 +6,8 @@ import * as NodeSDK from '@n8n-clone/node-sdk';
 export class ExecutionEngine {
   constructor() {
     this.nodeInstances = new Map();
+    this.actionStatusCache = new Map();
+    this.cacheExpiry = 60000; // 1 minute cache
     this.initializeNodes();
   }
 
@@ -46,6 +48,12 @@ export class ExecutionEngine {
     if (!validation.isValid) {
       throw new Error(`Workflow validation failed: ${validation.errors.join(', ')}`);
     }
+
+    // Clear old cache entries before execution
+    this.clearExpiredCache();
+    
+    // Pre-load action status for all nodes in the workflow
+    await this.preloadActionStatus(workflow.nodes);
 
     const context = new ExecutionContext(workflow, execution, credentials);
     const sorter = new TopologicalSort(workflow);
@@ -107,6 +115,36 @@ export class ExecutionEngine {
     };
   }
 
+  async preloadActionStatus(nodes) {
+    try {
+      const { WorkflowAction } = await import('@n8n-clone/shared');
+      const nodeTypes = [...new Set(nodes.map(n => n.type))];
+      
+      for (const nodeType of nodeTypes) {
+        if (!this.actionStatusCache.has(nodeType)) {
+          const action = await WorkflowAction.findOne({ actionId: nodeType });
+          this.actionStatusCache.set(nodeType, {
+            enabled: action ? action.enabled : true,
+            action: action,
+            timestamp: Date.now()
+          });
+        }
+      }
+    } catch (error) {
+      // If WorkflowAction is not available, continue anyway
+      console.warn('Could not preload action status:', error.message);
+    }
+  }
+
+  clearExpiredCache() {
+    const now = Date.now();
+    for (const [key, value] of this.actionStatusCache.entries()) {
+      if (now - value.timestamp > this.cacheExpiry) {
+        this.actionStatusCache.delete(key);
+      }
+    }
+  }
+
   async executeNode(node, context, inputData) {
     const nodeInstance = this.nodeInstances.get(node.type);
 
@@ -114,26 +152,21 @@ export class ExecutionEngine {
       throw new Error(`Unknown node type: ${node.type}`);
     }
 
-    // Check if the action is enabled (if WorkflowAction model is available)
-    try {
-      const { WorkflowAction } = await import('@n8n-clone/shared');
-      const isEnabled = await WorkflowAction.isActionEnabled(node.type);
-      
-      if (!isEnabled) {
-        throw new Error(`Action "${node.type}" has been disabled by administrator`);
-      }
-      
-      // Update usage statistics
-      const action = await WorkflowAction.findOne({ actionId: node.type });
-      if (action) {
-        await action.updateUsage();
-      }
-    } catch (error) {
-      // If WorkflowAction model is not available or there's an error, continue anyway
-      // This ensures backward compatibility
-      if (error.message.includes('disabled by administrator')) {
-        throw error; // Re-throw if it's a disabled action error
-      }
+    // Check if the action is enabled (use cache)
+    const cachedStatus = this.actionStatusCache.get(node.type);
+    if (cachedStatus && !cachedStatus.enabled) {
+      throw new Error(`Action "${node.type}" has been disabled by administrator`);
+    }
+    
+    // Update usage statistics (fire and forget to not block execution)
+    if (cachedStatus?.action) {
+      setImmediate(async () => {
+        try {
+          await cachedStatus.action.updateUsage();
+        } catch (err) {
+          console.error('Failed to update action usage:', err);
+        }
+      });
     }
 
     const nodeContext = context.getNodeContext(node, inputData);
