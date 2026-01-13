@@ -1,0 +1,20 @@
+{
+  "name": "@n8n-clone/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and models",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "mongoose": "^8.9.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "crypto": "^1.0.1",
+    "validator": "^13.12.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@n8n-clone/worker",
+  "version": "1.0.0",
+  "description": "Workflow execution worker",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@n8n-clone/shared": "1.0.0",
+    "@n8n-clone/node-sdk": "1.0.0",
+    "@n8n-clone/engine": "1.0.0",
+    "bullmq": "^5.28.3",
+    "ioredis": "^5.4.2",
+    "dotenv": "^16.4.7"
+  }
+}

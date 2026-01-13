@@ -38,7 +38,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: services/api/Dockerfile
+      dockerfile: backend/api/Dockerfile
     container_name: n8n-api
     restart: unless-stopped
     ports:
@@ -68,10 +68,12 @@ services:
     networks:
       - n8n-network
     volumes:
-      - ./services/api:/app/services/api
-      - ./packages:/app/packages
+      - ./backend/api:/app/backend/api
+      - ./backend/shared:/app/backend/shared
+      - ./backend/node-sdk:/app/backend/node-sdk
+      - ./backend/engine:/app/backend/engine
       - /app/node_modules
-      - /app/services/api/node_modules
+      - /app/backend/api/node_modules
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
       interval: 30s
@@ -81,7 +83,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: services/worker/Dockerfile
+      dockerfile: backend/worker/Dockerfile
     container_name: n8n-worker
     restart: unless-stopped
     environment:
@@ -104,17 +106,19 @@ services:
     networks:
       - n8n-network
     volumes:
-      - ./services/worker:/app/services/worker
-      - ./packages:/app/packages
+      - ./backend/worker:/app/backend/worker
+      - ./backend/shared:/app/backend/shared
+      - ./backend/node-sdk:/app/backend/node-sdk
+      - ./backend/engine:/app/backend/engine
       - /app/node_modules
-      - /app/services/worker/node_modules
+      - /app/backend/worker/node_modules
     deploy:
       replicas: 2
 
   scheduler:
     build:
       context: .
-      dockerfile: services/scheduler/Dockerfile
+      dockerfile: backend/scheduler/Dockerfile
     container_name: n8n-scheduler
     restart: unless-stopped
     environment:
@@ -130,15 +134,15 @@ services:
     networks:
       - n8n-network
     volumes:
-      - ./services/scheduler:/app/services/scheduler
-      - ./packages:/app/packages
+      - ./backend/scheduler:/app/backend/scheduler
+      - ./backend/shared:/app/backend/shared
       - /app/node_modules
-      - /app/services/scheduler/node_modules
+      - /app/backend/scheduler/node_modules
 
   frontend:
     build:
       context: .
-      dockerfile: services/frontend/Dockerfile
+      dockerfile: frontend/Dockerfile
     container_name: n8n-frontend
     restart: unless-stopped
     ports:
@@ -150,9 +154,9 @@ services:
     networks:
       - n8n-network
     volumes:
-      - ./services/frontend:/app/services/frontend
+      - ./frontend:/app/frontend
       - /app/node_modules
-      - /app/services/frontend/node_modules
+      - /app/frontend/node_modules
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001"]
       interval: 30s

@@ -4,16 +4,22 @@
   "description": "Production-grade workflow automation platform built with MERN stack",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "services/*"
+    "frontend",
+    "backend/*"
   ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "docker compose up",
     "build": "npm run build --workspaces",
     "start": "docker compose up -d",
     "stop": "docker compose down",
-    "clean": "docker compose down -v && rm -rf node_modules packages/*/node_modules services/*/node_modules",
-    "logs": "docker compose logs -f"
+    "clean": "docker compose down -v && rm -rf node_modules frontend/node_modules backend/*/node_modules",
+    "logs": "docker compose logs -f",
+    "lint": "eslint . --ext .js,.jsx",
+    "format": "prettier --write \"**/*.{js,jsx,json,md}\""
   },
   "keywords": [
     "workflow",
@@ -22,5 +28,11 @@
     "mern"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "prettier": "^3.4.2"
+  }
 }
