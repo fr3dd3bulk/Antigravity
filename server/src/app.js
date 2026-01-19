@@ -20,6 +20,9 @@ import orgsRoutes from './modules/orgs/routes.js';
 import subscriptionsRoutes from './modules/subscriptions/routes.js';
 import credentialsRoutes from './modules/credentials/routes.js';
 import adminRoutes from './modules/admin/routes.js';
+import subscriptionsRoutes from './modules/subscriptions/routes.js';
+import credentialsRoutes from './modules/credentials/routes.js';
+import adminRoutes from './modules/admin/routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
