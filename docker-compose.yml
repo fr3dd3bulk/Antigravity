@@ -13,8 +13,16 @@ services:
       MONGO_INITDB_DATABASE: antigravity
     volumes:
       - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
     networks:
       - antigravity_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    command: ["mongod", "--bind_ip_all"]
 
   redis:
     image: redis:7-alpine
@@ -26,9 +34,122 @@ services:
       - redis_data:/data
     networks:
       - antigravity_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: antigravity_api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/antigravity?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - CLIENT_URL=http://localhost:5173
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - antigravity_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - ./server/src:/app/src
+      - /app/node_modules
+
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.worker
+    container_name: antigravity_worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/antigravity?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - WORKER_CONCURRENCY=10
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - antigravity_network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - ./server/src:/app/src
+      - /app/node_modules
+
+  scheduler:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.scheduler
+    container_name: antigravity_scheduler
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/antigravity?authSource=admin
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - antigravity_network
+    volumes:
+      - ./server/src:/app/src
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: antigravity_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    depends_on:
+      - api
+    networks:
+      - antigravity_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   mongodb_data:
+  mongodb_config:
   redis_data:
 
 networks:

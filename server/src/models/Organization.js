@@ -12,43 +12,25 @@ const organizationSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
   },
-  stripeCustomerId: {
+  logo: {
     type: String,
-    default: null,
+    default: '',
   },
-  subscriptionStatus: {
+  website: {
     type: String,
-    enum: ['trial', 'active', 'past_due', 'canceled', 'unpaid'],
-    default: 'trial',
+    default: '',
   },
-  subscriptionId: {
-    type: String,
-    default: null,
-  },
-  planType: {
-    type: String,
-    enum: ['free', 'starter', 'professional', 'enterprise'],
-    default: 'free',
-  },
-  credits: {
-    type: Number,
-    default: 1000,
-  },
-  maxWorkflows: {
-    type: Number,
-    default: 10,
-  },
-  maxExecutionsPerMonth: {
-    type: Number,
-    default: 1000,
-  },
-  trialEndsAt: {
-    type: Date,
-    default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+  settings: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
   },
   isActive: {
     type: Boolean,
     default: true,
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
   },
 }, {
   timestamps: true,
@@ -67,7 +49,8 @@ organizationSchema.pre('validate', function(next) {
 
 // Indexes
 organizationSchema.index({ slug: 1 });
-organizationSchema.index({ stripeCustomerId: 1 });
+organizationSchema.index({ isActive: 1 });
+organizationSchema.index({ createdBy: 1 });
 
 const Organization = mongoose.model('Organization', organizationSchema);
 

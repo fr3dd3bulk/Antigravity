@@ -20,16 +20,31 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['super_admin', 'org_admin', 'member'],
-    default: 'member',
+    enum: ['super_admin', 'user'],
+    default: 'user',
   },
-  orgId: {
+  defaultOrgId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Organization',
+  },
+  avatar: {
+    type: String,
+    default: '',
   },
   isActive: {
     type: Boolean,
     default: true,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  lastLoginAt: {
+    type: Date,
+  },
+  preferences: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
   },
 }, {
   timestamps: true,
@@ -62,7 +77,8 @@ userSchema.methods.toJSON = function() {
 
 // Indexes
 userSchema.index({ email: 1 });
-userSchema.index({ orgId: 1 });
+userSchema.index({ defaultOrgId: 1 });
+userSchema.index({ role: 1, isActive: 1 });
 
 const User = mongoose.model('User', userSchema);
 

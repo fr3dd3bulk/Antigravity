@@ -11,10 +11,25 @@ const executionSchema = new mongoose.Schema({
     ref: 'Organization',
     required: true,
   },
+  triggeredBy: {
+    type: String,
+    enum: ['manual', 'webhook', 'schedule', 'event', 'api', 'retry'],
+    required: true,
+    default: 'manual',
+  },
+  startedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
   status: {
     type: String,
-    enum: ['running', 'success', 'failed', 'canceled'],
+    enum: ['queued', 'running', 'success', 'failed', 'error', 'canceled', 'waiting'],
     default: 'running',
+  },
+  mode: {
+    type: String,
+    enum: ['manual', 'production'],
+    default: 'production',
   },
   triggerData: {
     type: mongoose.Schema.Types.Mixed,
@@ -34,10 +49,29 @@ const executionSchema = new mongoose.Schema({
     error: String,
     duration: Number, // milliseconds
   }],
+  nodeResults: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed,
+    default: new Map(),
+  },
+  currentNodeId: {
+    type: String, // For partial resume
+  },
   error: {
     message: String,
     nodeId: String,
     stack: String,
+  },
+  retryOf: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Execution',
+  },
+  retryCount: {
+    type: Number,
+    default: 0,
+  },
+  waitingFor: {
+    type: String, // For human approval or external trigger
   },
   startedAt: {
     type: Date,
@@ -46,8 +80,15 @@ const executionSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
   },
+  stoppedAt: {
+    type: Date,
+  },
   duration: {
     type: Number, // milliseconds
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
   },
 }, {
   timestamps: true,
@@ -58,6 +99,9 @@ executionSchema.pre('save', function(next) {
   if (this.completedAt && this.startedAt && !this.duration) {
     this.duration = this.completedAt - this.startedAt;
   }
+  if (this.stoppedAt && this.startedAt && !this.duration) {
+    this.duration = this.stoppedAt - this.startedAt;
+  }
   next();
 });
 
@@ -65,6 +109,8 @@ executionSchema.pre('save', function(next) {
 executionSchema.index({ workflowId: 1, createdAt: -1 });
 executionSchema.index({ orgId: 1, status: 1 });
 executionSchema.index({ status: 1, createdAt: -1 });
+executionSchema.index({ startedBy: 1, createdAt: -1 });
+executionSchema.index({ triggeredBy: 1 });
 
 const Execution = mongoose.model('Execution', executionSchema);
 

@@ -26,7 +26,10 @@
     "dotenv": "^16.3.1",
     "express-validator": "^7.0.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "uuid": "^9.0.1",
+    "cron": "^3.1.6",
+    "vm2": "^3.9.19"
   },
   "devDependencies": {
     "jest": "^29.7.0",
