@@ -2,7 +2,11 @@ import crypto from 'crypto';
 import Credential from '../../models/Credential.js';
 import AuditLog from '../../models/AuditLog.js';
 
-const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex').slice(0, 32);
+if (!process.env.CREDENTIAL_ENCRYPTION_KEY) {
+  throw new Error('CREDENTIAL_ENCRYPTION_KEY environment variable is required');
+}
+
+const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY;
 const IV_LENGTH = 16;
 
 /**
