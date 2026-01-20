@@ -68,6 +68,11 @@ npm run dev
 - Backend: http://localhost:3000
 - API Docs: http://localhost:3000/api-docs
 
+**Default Super Admin Login:**
+- Email: `admin@antigravity.dev`
+- Password: `admin123`
+- ⚠️ **Change this password immediately in production!**
+
 ## 🏗️ Tech Stack
 
 ### Backend
@@ -181,6 +186,7 @@ Reads `inputSchema` and automatically renders:
 
 ## 📚 Documentation
 
+- **[USER_JOURNEY.md](./USER_JOURNEY.md)**: Complete user journey guide with UI flows
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Deep dive into meta-driven design
 - **[TESTING_GUIDE.md](./TESTING_GUIDE.md)**: Complete testing instructions
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Production deployment guide
