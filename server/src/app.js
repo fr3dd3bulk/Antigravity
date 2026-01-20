@@ -9,6 +9,7 @@ import swaggerSpec from './config/swagger.js';
 import seedActionDefinitions from './seeder/actions.js';
 import seedNodeDefinitions from './seeder/nodeDefinitions.js';
 import seedSystemData from './seeder/systemData.js';
+import seedSuperAdmin from './seeder/superAdmin.js';
 import { initQueue, initWorker } from './engine/worker.js';
 
 // Import routes
@@ -85,6 +86,9 @@ const startServer = async () => {
 
     // Seed system data
     await seedSystemData();
+    
+    // Seed super admin user
+    await seedSuperAdmin();
     
     // Seed ActionDefinitions (backward compatibility)
     await seedActionDefinitions();
