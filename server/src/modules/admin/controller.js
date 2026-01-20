@@ -8,6 +8,25 @@ import Subscription from '../../models/Subscription.js';
 import AuditLog from '../../models/AuditLog.js';
 
 /**
+ * Helper function to create audit log (only if user has orgId)
+ */
+const createAuditLog = async (req, action, resource, resourceId, details = {}) => {
+  // Only create audit log if user has an orgId
+  if (req.user && req.user.orgId) {
+    await AuditLog.create({
+      orgId: req.user.orgId._id || req.user.orgId,
+      userId: req.user._id,
+      action,
+      resource,
+      resourceId,
+      details,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+};
+
+/**
  * @swagger
  * /api/admin/plans:
  *   get:
@@ -87,15 +106,9 @@ export const createPlan = async (req, res) => {
     const plan = new Plan(planData);
     await plan.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'create',
-      resource: 'plan',
-      resourceId: plan._id,
-      details: { name: plan.name, key: plan.key },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'create', 'plan', plan._id, { 
+      name: plan.name, 
+      key: plan.key 
     });
 
     res.status(201).json({
@@ -143,15 +156,8 @@ export const updatePlan = async (req, res) => {
     Object.assign(plan, updateData);
     await plan.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'update',
-      resource: 'plan',
-      resourceId: plan._id,
-      details: { updates: Object.keys(updateData) },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'update', 'plan', plan._id, { 
+      updates: Object.keys(updateData) 
     });
 
     res.json({
@@ -210,15 +216,8 @@ export const deletePlan = async (req, res) => {
     plan.isActive = false;
     await plan.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'delete',
-      resource: 'plan',
-      resourceId: plan._id,
-      details: { name: plan.name },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'delete', 'plan', plan._id, { 
+      name: plan.name 
     });
 
     res.json({ message: 'Plan deleted successfully' });
@@ -300,15 +299,9 @@ export const createNodeDefinition = async (req, res) => {
 
     await node.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'create',
-      resource: 'node',
-      resourceId: node._id,
-      details: { name: node.name, category: node.category },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'create', 'node', node._id, { 
+      name: node.name, 
+      category: node.category 
     });
 
     res.status(201).json({
@@ -360,15 +353,8 @@ export const updateNodeDefinition = async (req, res) => {
     Object.assign(node, updateData);
     await node.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'update',
-      resource: 'node',
-      resourceId: node._id,
-      details: { updates: Object.keys(updateData) },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'update', 'node', node._id, { 
+      updates: Object.keys(updateData) 
     });
 
     res.json({
@@ -419,15 +405,8 @@ export const deleteNodeDefinition = async (req, res) => {
     node.isActive = false;
     await node.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'delete',
-      resource: 'node',
-      resourceId: node._id,
-      details: { name: node.name },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'delete', 'node', node._id, { 
+      name: node.name 
     });
 
     res.json({ message: 'Node definition deleted successfully' });
@@ -622,15 +601,8 @@ export const updateUser = async (req, res) => {
     Object.assign(user, updateData);
     await user.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'update',
-      resource: 'user',
-      resourceId: user._id,
-      details: { updates: Object.keys(updateData) },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    await createAuditLog(req, 'update', 'user', user._id, { 
+      updates: Object.keys(updateData) 
     });
 
     res.json({
