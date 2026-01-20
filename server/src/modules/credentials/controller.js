@@ -10,6 +10,39 @@ const ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY;
 const IV_LENGTH = 16;
 
 /**
+ * Helper function to build query filter based on user role and orgId
+ */
+const buildOrgQuery = (req, baseQuery = {}) => {
+  // Super admins without orgId can access all resources
+  if (req.user.role === 'super_admin' && !req.user.orgId) {
+    return baseQuery;
+  }
+  
+  // Regular users must have orgId
+  if (!req.user.orgId) {
+    throw new Error('User must belong to an organization');
+  }
+  
+  // Extract orgId (handle both populated and non-populated cases)
+  const orgId = req.user.orgId._id || req.user.orgId;
+  
+  return {
+    ...baseQuery,
+    orgId,
+  };
+};
+
+/**
+ * Helper function to get orgId value (or null for super admin)
+ */
+const getOrgId = (req) => {
+  if (!req.user.orgId) {
+    return null;
+  }
+  return req.user.orgId._id || req.user.orgId;
+};
+
+/**
  * Encrypt credential data using AES-256
  */
 const encryptData = (data) => {
@@ -85,9 +118,10 @@ export const createCredential = async (req, res) => {
       createdBy: req.user._id,
     };
 
-    // Only add orgId if user has one
-    if (req.user.orgId) {
-      credentialData.orgId = req.user.orgId._id || req.user.orgId;
+    // Add orgId if user has one
+    const orgId = getOrgId(req);
+    if (orgId) {
+      credentialData.orgId = orgId;
     }
 
     const credential = new Credential(credentialData);
@@ -95,9 +129,9 @@ export const createCredential = async (req, res) => {
     await credential.save();
 
     // Only create audit log if user has an orgId
-    if (req.user.orgId) {
+    if (orgId) {
       await AuditLog.create({
-        orgId: req.user.orgId._id || req.user.orgId,
+        orgId,
         userId: req.user._id,
         action: 'create',
         resource: 'credential',
@@ -145,10 +179,8 @@ export const getCredentials = async (req, res) => {
   try {
     const { type, nodeType } = req.query;
     
-    // Super admins can see all credentials, regular users only their org's credentials
-    const filter = req.user.role === 'super_admin' && !req.user.orgId
-      ? { isActive: true }
-      : { orgId: req.user.orgId._id || req.user.orgId, isActive: true };
+    // Build query filter based on user role and orgId
+    const filter = buildOrgQuery(req, { isActive: true });
 
     if (type) {
       filter.type = type;
@@ -165,7 +197,7 @@ export const getCredentials = async (req, res) => {
     res.json({ credentials });
   } catch (error) {
     console.error('Get credentials error:', error);
-    res.status(500).json({ error: 'Failed to get credentials' });
+    res.status(500).json({ error: error.message || 'Failed to get credentials' });
   }
 };
 
@@ -197,10 +229,8 @@ export const getCredential = async (req, res) => {
     const { id } = req.params;
     const { decrypt } = req.query;
 
-    // Super admins can access any credential, regular users only their org's credentials
-    const query = req.user.role === 'super_admin' && !req.user.orgId
-      ? { _id: id }
-      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+    // Build query filter based on user role and orgId
+    const query = buildOrgQuery(req, { _id: id });
 
     const credential = await Credential.findOne(query)
       .populate('createdBy', 'name email');
@@ -225,7 +255,7 @@ export const getCredential = async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('Get credential error:', error);
-    res.status(500).json({ error: 'Failed to get credential' });
+    res.status(500).json({ error: error.message || 'Failed to get credential' });
   }
 };
 
@@ -269,10 +299,8 @@ export const updateCredential = async (req, res) => {
     const { id } = req.params;
     const { name, data, nodeTypes, isActive } = req.body;
 
-    // Super admins can update any credential, regular users only their org's credentials
-    const query = req.user.role === 'super_admin' && !req.user.orgId
-      ? { _id: id }
-      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+    // Build query filter based on user role and orgId
+    const query = buildOrgQuery(req, { _id: id });
 
     const credential = await Credential.findOne(query);
 
@@ -291,9 +319,10 @@ export const updateCredential = async (req, res) => {
     await credential.save();
 
     // Only create audit log if user has an orgId
-    if (req.user.orgId) {
+    const orgId = getOrgId(req);
+    if (orgId) {
       await AuditLog.create({
-        orgId: req.user.orgId._id || req.user.orgId,
+        orgId,
         userId: req.user._id,
         action: 'update',
         resource: 'credential',
@@ -310,7 +339,7 @@ export const updateCredential = async (req, res) => {
     });
   } catch (error) {
     console.error('Update credential error:', error);
-    res.status(500).json({ error: 'Failed to update credential' });
+    res.status(500).json({ error: error.message || 'Failed to update credential' });
   }
 };
 
@@ -336,10 +365,8 @@ export const deleteCredential = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Super admins can delete any credential, regular users only their org's credentials
-    const query = req.user.role === 'super_admin' && !req.user.orgId
-      ? { _id: id }
-      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+    // Build query filter based on user role and orgId
+    const query = buildOrgQuery(req, { _id: id });
 
     const credential = await Credential.findOne(query);
 
@@ -351,9 +378,10 @@ export const deleteCredential = async (req, res) => {
     await credential.save();
 
     // Only create audit log if user has an orgId
-    if (req.user.orgId) {
+    const orgId = getOrgId(req);
+    if (orgId) {
       await AuditLog.create({
-        orgId: req.user.orgId._id || req.user.orgId,
+        orgId,
         userId: req.user._id,
         action: 'delete',
         resource: 'credential',
@@ -367,7 +395,7 @@ export const deleteCredential = async (req, res) => {
     res.json({ message: 'Credential deleted successfully' });
   } catch (error) {
     console.error('Delete credential error:', error);
-    res.status(500).json({ error: 'Failed to delete credential' });
+    res.status(500).json({ error: error.message || 'Failed to delete credential' });
   }
 };
 
@@ -403,10 +431,8 @@ export const testCredential = async (req, res) => {
     const { id } = req.params;
     const { testEndpoint } = req.body;
 
-    // Super admins can test any credential, regular users only their org's credentials
-    const query = req.user.role === 'super_admin' && !req.user.orgId
-      ? { _id: id }
-      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+    // Build query filter based on user role and orgId
+    const query = buildOrgQuery(req, { _id: id });
 
     const credential = await Credential.findOne(query);
 
@@ -425,9 +451,10 @@ export const testCredential = async (req, res) => {
     }
 
     // Only create audit log if user has an orgId
-    if (req.user.orgId) {
+    const orgId = getOrgId(req);
+    if (orgId) {
       await AuditLog.create({
-        orgId: req.user.orgId._id || req.user.orgId,
+        orgId,
         userId: req.user._id,
         action: 'test',
         resource: 'credential',
@@ -445,6 +472,6 @@ export const testCredential = async (req, res) => {
     });
   } catch (error) {
     console.error('Test credential error:', error);
-    res.status(500).json({ error: 'Failed to test credential' });
+    res.status(500).json({ error: error.message || 'Failed to test credential' });
   }
 };
