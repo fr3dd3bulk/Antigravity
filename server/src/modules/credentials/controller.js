@@ -77,27 +77,36 @@ export const createCredential = async (req, res) => {
 
     const encryptedData = encryptData(data);
 
-    const credential = new Credential({
+    const credentialData = {
       name,
       type,
       data: encryptedData,
       nodeTypes: nodeTypes || [],
-      orgId: req.user.orgId._id,
       createdBy: req.user._id,
-    });
+    };
+
+    // Only add orgId if user has one
+    if (req.user.orgId) {
+      credentialData.orgId = req.user.orgId._id || req.user.orgId;
+    }
+
+    const credential = new Credential(credentialData);
 
     await credential.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'create',
-      resource: 'credential',
-      resourceId: credential._id,
-      details: { name, type },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    // Only create audit log if user has an orgId
+    if (req.user.orgId) {
+      await AuditLog.create({
+        orgId: req.user.orgId._id || req.user.orgId,
+        userId: req.user._id,
+        action: 'create',
+        resource: 'credential',
+        resourceId: credential._id,
+        details: { name, type },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+    }
 
     res.status(201).json({
       message: 'Credential created successfully',
@@ -136,10 +145,10 @@ export const getCredentials = async (req, res) => {
   try {
     const { type, nodeType } = req.query;
     
-    const filter = {
-      orgId: req.user.orgId._id,
-      isActive: true,
-    };
+    // Super admins can see all credentials, regular users only their org's credentials
+    const filter = req.user.role === 'super_admin' && !req.user.orgId
+      ? { isActive: true }
+      : { orgId: req.user.orgId._id || req.user.orgId, isActive: true };
 
     if (type) {
       filter.type = type;
@@ -188,10 +197,13 @@ export const getCredential = async (req, res) => {
     const { id } = req.params;
     const { decrypt } = req.query;
 
-    const credential = await Credential.findOne({
-      _id: id,
-      orgId: req.user.orgId._id,
-    }).populate('createdBy', 'name email');
+    // Super admins can access any credential, regular users only their org's credentials
+    const query = req.user.role === 'super_admin' && !req.user.orgId
+      ? { _id: id }
+      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+
+    const credential = await Credential.findOne(query)
+      .populate('createdBy', 'name email');
 
     if (!credential) {
       return res.status(404).json({ error: 'Credential not found' });
@@ -257,10 +269,12 @@ export const updateCredential = async (req, res) => {
     const { id } = req.params;
     const { name, data, nodeTypes, isActive } = req.body;
 
-    const credential = await Credential.findOne({
-      _id: id,
-      orgId: req.user.orgId._id,
-    });
+    // Super admins can update any credential, regular users only their org's credentials
+    const query = req.user.role === 'super_admin' && !req.user.orgId
+      ? { _id: id }
+      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+
+    const credential = await Credential.findOne(query);
 
     if (!credential) {
       return res.status(404).json({ error: 'Credential not found' });
@@ -276,16 +290,19 @@ export const updateCredential = async (req, res) => {
 
     await credential.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'update',
-      resource: 'credential',
-      resourceId: credential._id,
-      details: { name, hasDataUpdate: !!data },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    // Only create audit log if user has an orgId
+    if (req.user.orgId) {
+      await AuditLog.create({
+        orgId: req.user.orgId._id || req.user.orgId,
+        userId: req.user._id,
+        action: 'update',
+        resource: 'credential',
+        resourceId: credential._id,
+        details: { name, hasDataUpdate: !!data },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+    }
 
     res.json({
       message: 'Credential updated successfully',
@@ -319,10 +336,12 @@ export const deleteCredential = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const credential = await Credential.findOne({
-      _id: id,
-      orgId: req.user.orgId._id,
-    });
+    // Super admins can delete any credential, regular users only their org's credentials
+    const query = req.user.role === 'super_admin' && !req.user.orgId
+      ? { _id: id }
+      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+
+    const credential = await Credential.findOne(query);
 
     if (!credential) {
       return res.status(404).json({ error: 'Credential not found' });
@@ -331,16 +350,19 @@ export const deleteCredential = async (req, res) => {
     credential.isActive = false;
     await credential.save();
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'delete',
-      resource: 'credential',
-      resourceId: credential._id,
-      details: { name: credential.name },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    // Only create audit log if user has an orgId
+    if (req.user.orgId) {
+      await AuditLog.create({
+        orgId: req.user.orgId._id || req.user.orgId,
+        userId: req.user._id,
+        action: 'delete',
+        resource: 'credential',
+        resourceId: credential._id,
+        details: { name: credential.name },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+    }
 
     res.json({ message: 'Credential deleted successfully' });
   } catch (error) {
@@ -381,10 +403,12 @@ export const testCredential = async (req, res) => {
     const { id } = req.params;
     const { testEndpoint } = req.body;
 
-    const credential = await Credential.findOne({
-      _id: id,
-      orgId: req.user.orgId._id,
-    });
+    // Super admins can test any credential, regular users only their org's credentials
+    const query = req.user.role === 'super_admin' && !req.user.orgId
+      ? { _id: id }
+      : { _id: id, orgId: req.user.orgId._id || req.user.orgId };
+
+    const credential = await Credential.findOne(query);
 
     if (!credential) {
       return res.status(404).json({ error: 'Credential not found' });
@@ -400,16 +424,19 @@ export const testCredential = async (req, res) => {
       });
     }
 
-    await AuditLog.create({
-      orgId: req.user.orgId._id,
-      userId: req.user._id,
-      action: 'test',
-      resource: 'credential',
-      resourceId: credential._id,
-      details: { testEndpoint },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    // Only create audit log if user has an orgId
+    if (req.user.orgId) {
+      await AuditLog.create({
+        orgId: req.user.orgId._id || req.user.orgId,
+        userId: req.user._id,
+        action: 'test',
+        resource: 'credential',
+        resourceId: credential._id,
+        details: { testEndpoint },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+    }
 
     res.json({
       success: true,

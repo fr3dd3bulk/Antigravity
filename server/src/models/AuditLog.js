@@ -4,7 +4,7 @@ const auditLogSchema = new mongoose.Schema({
   orgId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Organization',
-    required: true,
+    required: false, // Optional for super_admin users
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
